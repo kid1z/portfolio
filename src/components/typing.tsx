@@ -1,121 +1,185 @@
-'use client'
+"use client";
 
-import { AnimatePresence, motion } from 'motion/react'
-import { useEffect, useState } from 'react'
+import { ArrowUpRight } from "lucide-react";
+import { useGSAP } from "@gsap/react";
+import gsap from "gsap";
+import { useCallback, useRef, useState } from "react";
+import { shouldPlayIntro } from "#/lib/intro-preference";
+import OldIntro from "./old-intro";
 
-const phrases = [
-  'Xin chào',
-  'Hello',
-  'こんにちは',
-  '안녕하세요',
-  'Bonjour',
-  'Привет'
-]
+gsap.registerPlugin(useGSAP);
 
-export default function ChatGPTIOSIntro() {
-  const [phraseIndex, setPhraseIndex] = useState(0)
-  const [visibleLength, setVisibleLength] = useState(0)
-  const [mode, setMode] = useState<'typing' | 'pause' | 'deleting'>('typing')
+type IntroPhase = "pending" | "playing" | "leaving" | "complete";
 
-  const phrase = phrases[phraseIndex]
-  const visible = phrase.slice(0, visibleLength)
+export default function IntroGreeting({
+	replayKey,
+	onActiveChange,
+}: {
+	replayKey: number;
+	onActiveChange?: (active: boolean) => void;
+}) {
+	const [phase, setPhase] = useState<IntroPhase>("pending");
+	const active = phase !== "complete";
+	const gateRef = useRef<HTMLDivElement>(null);
+	const skipRef = useRef<HTMLButtonElement>(null);
+	const complete = useCallback(() => {
+		setPhase((current) => (current === "complete" ? current : "leaving"));
+	}, []);
+	const finish = useCallback(() => setPhase("complete"), []);
 
-  useEffect(() => {
-    let timeout: NodeJS.Timeout
+	useGSAP(
+		() => {
+			if (!shouldPlayIntro(replayKey > 0)) {
+				finish();
+				return;
+			}
+			setPhase("playing");
+		},
+		{ dependencies: [replayKey], scope: gateRef },
+	);
 
-    // typing
-    if (mode === 'typing') {
-      if (visibleLength < phrase.length) {
-        const isSpace = phrase[visibleLength] === ' '
+	useGSAP(
+		() => {
+			onActiveChange?.(active);
+		},
+		{ dependencies: [active, onActiveChange], scope: gateRef },
+	);
 
-        timeout = setTimeout(
-          () => {
-            setVisibleLength((v) => v + 1)
-          },
-          isSpace
-            ? 30
-            : 42 + Math.random() * 18,
-        )
-      } else {
-        timeout = setTimeout(() => {
-          setMode('pause')
-        }, 700)
-      }
-    }
+	useGSAP(
+		() => {
+			if (!active) return;
+			const focus = window.setTimeout(() => skipRef.current?.focus(), 50);
+			const onEscape = (event: KeyboardEvent) => {
+				if (event.key === "Escape") complete();
+			};
+			const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
+			const onMotionChange = () => {
+				if (motion.matches) finish();
+			};
+			window.addEventListener("keydown", onEscape);
+			motion.addEventListener("change", onMotionChange);
+			return () => {
+				clearTimeout(focus);
+				window.removeEventListener("keydown", onEscape);
+				motion.removeEventListener("change", onMotionChange);
+			};
+		},
+		{
+			dependencies: [active, complete, finish],
+			revertOnUpdate: true,
+			scope: gateRef,
+		},
+	);
 
-    // pause
-    if (mode === 'pause') {
-      timeout = setTimeout(() => {
-        setMode('deleting')
-      }, 200)
-    }
+	useGSAP(
+		() => {
+			if (!active) return;
+			const content = document.getElementById("portfolio-content");
+			const previousOverflow = document.body.style.overflow;
+			const previousFocus = document.activeElement;
+			const previousInert = content?.inert ?? false;
+			if (content) content.inert = true;
+			document.body.style.overflow = "hidden";
+			return () => {
+				if (content) content.inert = previousInert;
+				document.body.style.overflow = previousOverflow;
+				if (
+					previousFocus instanceof HTMLElement &&
+					previousFocus !== document.body
+				) {
+					previousFocus.focus({ preventScroll: true });
+				} else {
+					content
+						?.querySelector<HTMLElement>("main")
+						?.focus({ preventScroll: true });
+				}
+			};
+		},
+		{ dependencies: [active], revertOnUpdate: true, scope: gateRef },
+	);
 
-    // deleting
-    if (mode === 'deleting') {
-      if (visibleLength > 0) {
-        timeout = setTimeout(
-          () => {
-            setVisibleLength((v) => v - 1)
-          },
-          18,
-        )
-      } else {
-        setPhraseIndex((v) => (v + 1) % phrases.length)
-        setMode('typing')
-      }
-    }
+	useGSAP(
+		() => {
+			if (phase !== "playing") return;
+			try {
+				sessionStorage.setItem("hiep-intro-seen", "true");
+			} catch (error) {
+				console.warn("Intro preferences could not be saved.", error);
+			}
+		},
+		{ dependencies: [phase], scope: gateRef },
+	);
 
-    return () => clearTimeout(timeout)
-  }, [visibleLength, mode, phrase])
+	useGSAP(
+		() => {
+			if (phase !== "leaving") return;
+			const content = document.getElementById("portfolio-content");
+			if (
+				!content ||
+				window.matchMedia("(prefers-reduced-motion: reduce)").matches
+			) {
+				finish();
+				return;
+			}
 
-  return (
-    <div className="flex min-h-screen items-center justify-center px-6">
-      <div className="flex items-center justify-center">
-        <AnimatePresence mode="popLayout">
-          <motion.div
-            key={visible}
-            layout
-            transition={{
-              layout: {
-                duration:
-                  mode === 'deleting'
-                    ? 0.08
-                    : 0.18,
-                ease: [0.22, 1, 0.36, 1],
-              },
-            }}
-            className="flex items-center"
-          >
-            <motion.span
-              layout
-              className="whitespace-nowrap text-[34px] font-bold leading-none tracking-[-0.035em] text-black"
-            >
-              {visible}
-            </motion.span>
+			const timeline = gsap.timeline({
+				id: "portfolio-intro-reveal",
+				defaults: { ease: "power3.out", duration: 0.8 },
+				onComplete: finish,
+			});
+			timeline.to(gateRef.current, { autoAlpha: 0, duration: 0.55 }, 0).fromTo(
+				content,
+				{ autoAlpha: 0 },
+				{
+					autoAlpha: 1,
+					clearProps: "opacity,visibility",
+				},
+				0.15,
+			);
 
-            <motion.div
-              layout
-              animate={{
-                scale:
-                  mode === 'typing'
-                    ? [1, 0.94, 1]
-                    : 1,
-              }}
-              transition={{
-                layout: {
-                  duration:
-                    mode === 'deleting'
-                      ? 0.06
-                      : 0.16,
-                  ease: [0.22, 1, 0.36, 1],
-                },
-                duration: 0.45,
-              }}
-              className="ml-[4px] h-[30px] w-[30px] rounded-full bg-black"
-            />
-          </motion.div>
-        </AnimatePresence>
-      </div>
-    </div>
-  )
+			const entrance = content.querySelectorAll(
+				".site-header, .hero-copy > *, .hero .sculpture",
+			);
+			if (entrance.length) {
+				timeline.fromTo(
+					entrance,
+					{ autoAlpha: 0, y: 22 },
+					{
+						autoAlpha: 1,
+						y: 0,
+						stagger: 0.07,
+						clearProps: "opacity,visibility,transform",
+					},
+					0.2,
+				);
+			}
+		},
+		{ dependencies: [phase, finish], revertOnUpdate: true, scope: gateRef },
+	);
+
+	if (!active) return null;
+
+	return (
+		<div
+			ref={gateRef}
+			className="intro-gate"
+			data-intro-phase={phase}
+			role="dialog"
+			aria-modal="true"
+			aria-label="Welcome to Hiep's portfolio"
+		>
+			<div aria-hidden="true">
+				<OldIntro key={replayKey} onComplete={complete} />
+			</div>
+			<span className="sr-only">Hello. Welcome to Hiep Tran's portfolio.</span>
+			<button
+				ref={skipRef}
+				type="button"
+				className="intro-skip text-link"
+				onClick={complete}
+			>
+				Skip intro <ArrowUpRight size={17} aria-hidden="true" />
+			</button>
+		</div>
+	);
 }

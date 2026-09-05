@@ -31,7 +31,11 @@ export default function IntroAnimation() {
 			});
 
 			// tl.to(logoRef.current, { opacity: 0, duration: 0.2 }, "+=0.5")
-			tl.to(overlayRef.current, { y: "-100%", ease: "expo.inOut", duration: 2 }, "+=0.5")
+			tl.to(
+				overlayRef.current,
+				{ y: "-100%", ease: "expo.inOut", duration: 2 },
+				"+=0.5",
+			);
 
 			return () => {
 				gsap.set(logoRef.current, { display: "none" });

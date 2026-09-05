@@ -1,222 +1,41 @@
-Welcome to your new TanStack Start app! 
+# Hiep Tran's portfolio
 
-# Getting Started
+A personal portfolio built with React 19, TanStack Start, TypeScript, and Three.js. The existing multilingual greeting and handwritten signature are retained, with a full portfolio behind the intro.
 
-To run this application:
+## Run locally
 
-```bash
+```sh
 bun install
 bun --bun run dev
 ```
 
-# Building For Production
+Open `http://localhost:3000`.
 
-To build this application for production:
-
-```bash
+```sh
 bun --bun run build
-```
-
-## Testing
-
-This project uses [Vitest](https://vitest.dev/) for testing. You can run the tests with:
-
-```bash
+bun --bun run preview
 bun --bun run test
+bunx tsc --noEmit
 ```
 
-## Styling
+## Personalize
 
-This project uses [Tailwind CSS](https://tailwindcss.com/) for styling.
+- **Profile and featured projects:** `src/lib/profile.ts`. The content is based on the public `kid1z` GitHub profile and repositories. Contact links use the supplied LinkedIn profile; no email, employment history, or client claims are invented.
+- **Copy and sections:** `src/components/portfolio.tsx`. The page has work, about, and contact anchors. The existing `/about` route also opens the about section.
+- **Colors and layout:** Tailwind utilities in `src/components/portfolio.tsx` and `src/components/sculpture.tsx` control layout, responsive sizing, and interactive states. Shared theme tokens in `src/styles.css` map to utilities such as `text-muted`, `bg-paper`, and `border-line`, supporting system light/dark themes and the in-page theme switch. The stylesheet retains global defaults, intro gating, and animation hooks. Fonts are bundled locally, not fetched from Google.
+- **Intro:** `src/components/old-intro.tsx` supplies the original typing/deleting animation and black orb, on a light backdrop in both themes. `src/components/typing.tsx` wraps it with session and accessibility controls. A small first-paint preference script shows the intro before hydration, without flashing the home page; returning sessions and direct anchor visits bypass it. After one complete greeting cycle (or Skip/Escape), a GSAP timeline fades the overlay into a staggered home-page reveal. Replay restarts the original animation from the first greeting.
+- **Smooth scrolling:** `src/lib/use-portfolio-scroll.ts` adds GSAP ScrollSmoother after the intro finishes. The intro and fixed skip link stay outside the transformed content. Section links retain URL history and keyboard focus, replay pauses scrolling, and touch scrolling stays native. Reduced-motion preferences bypass the intro, entrance animation, and ScrollSmoother; without JavaScript, the portfolio remains visible with native scrolling.
+- **3D:** `src/lib/sculpture-scene.ts`, loaded dynamically by `src/components/sculpture.tsx`. The knot, orbit, and bloom are original procedural geometry, with no external models or texture downloads required. Use the shape buttons, drag to rotate, or the left/right controls. Animation can be paused and the view reset.
 
-### Removing Tailwind CSS
+## Performance and accessibility
 
-If you prefer not to use Tailwind CSS:
+The document and project links render without WebGL. Static sculpture posters remain visible while the engine loads or if WebGL fails; an explicit retry action is available. The engine caps pixel ratio and suspends rendering when offscreen or in a hidden tab. Reduced motion disables automatic animation. The intro releases background inertness, scroll lock, timers, and keyboard listeners when dismissed.
 
-1. Remove the demo pages in `src/routes/demo/`
-2. Replace the Tailwind import in `src/styles.css` with your own styles
-3. Remove `tailwindcss()` from the plugins array in `vite.config.ts`
-4. Uninstall the packages: `bun install @tailwindcss/vite tailwindcss -D`
+## Image sources
 
-## Linting & Formatting
+- `public/images/tiptap.jpg`: frame from the original demo linked in [Tiptap Table Free's README](https://github.com/kid1z/tiptap-table-free).
+- `public/images/cyberhealth.jpg`: capture of the project's public [CyberHealth site](https://cyberhealth1.vercel.app/), linked from the [HealthScore repository](https://github.com/kid1z/healthscore).
+- `public/images/avatar.jpg`: the public [kid1z GitHub avatar](https://github.com/kid1z), displayed as an avatar, not a personal photograph.
+- Sculpture posters are local renders of this portfolio's original Three.js scene.
 
-This project uses [Biome](https://biomejs.dev/) for linting and formatting. The following scripts are available:
-
-
-```bash
-bun --bun run lint
-bun --bun run format
-bun --bun run check
-```
-
-
-## T3Env
-
-- You can use T3Env to add type safety to your environment variables.
-- Add Environment variables to the `src/env.mjs` file.
-- Use the environment variables in your code.
-
-### Usage
-
-```ts
-import { env } from "#/env";
-
-console.log(env.VITE_APP_TITLE);
-```
-
-
-
-
-
-
-## Routing
-
-This project uses [TanStack Router](https://tanstack.com/router) with file-based routing. Routes are managed as files in `src/routes`.
-
-### Adding A Route
-
-To add a new route to your application just add a new file in the `./src/routes` directory.
-
-TanStack will automatically generate the content of the route file for you.
-
-Now that you have two routes you can use a `Link` component to navigate between them.
-
-### Adding Links
-
-To use SPA (Single Page Application) navigation you will need to import the `Link` component from `@tanstack/react-router`.
-
-```tsx
-import { Link } from "@tanstack/react-router";
-```
-
-Then anywhere in your JSX you can use it like so:
-
-```tsx
-<Link to="/about">About</Link>
-```
-
-This will create a link that will navigate to the `/about` route.
-
-More information on the `Link` component can be found in the [Link documentation](https://tanstack.com/router/v1/docs/framework/react/api/router/linkComponent).
-
-### Using A Layout
-
-In the File Based Routing setup the layout is located in `src/routes/__root.tsx`. Anything you add to the root route will appear in all the routes. The route content will appear in the JSX where you render `{children}` in the `shellComponent`.
-
-Here is an example layout that includes a header:
-
-```tsx
-import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
-
-export const Route = createRootRoute({
-  head: () => ({
-    meta: [
-      { charSet: 'utf-8' },
-      { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      { title: 'My App' },
-    ],
-  }),
-  shellComponent: ({ children }) => (
-    <html lang="en">
-      <head>
-        <HeadContent />
-      </head>
-      <body>
-        <header>
-          <nav>
-            <Link to="/">Home</Link>
-            <Link to="/about">About</Link>
-          </nav>
-        </header>
-        {children}
-        <Scripts />
-      </body>
-    </html>
-  ),
-})
-```
-
-More information on layouts can be found in the [Layouts documentation](https://tanstack.com/router/latest/docs/framework/react/guide/routing-concepts#layouts).
-
-## Server Functions
-
-TanStack Start provides server functions that allow you to write server-side code that seamlessly integrates with your client components.
-
-```tsx
-import { createServerFn } from '@tanstack/react-start'
-
-const getServerTime = createServerFn({
-  method: 'GET',
-}).handler(async () => {
-  return new Date().toISOString()
-})
-
-// Use in a component
-function MyComponent() {
-  const [time, setTime] = useState('')
-  
-  useEffect(() => {
-    getServerTime().then(setTime)
-  }, [])
-  
-  return <div>Server time: {time}</div>
-}
-```
-
-## API Routes
-
-You can create API routes by using the `server` property in your route definitions:
-
-```tsx
-import { createFileRoute } from '@tanstack/react-router'
-import { json } from '@tanstack/react-start'
-
-export const Route = createFileRoute('/api/hello')({
-  server: {
-    handlers: {
-      GET: () => json({ message: 'Hello, World!' }),
-    },
-  },
-})
-```
-
-## Data Fetching
-
-There are multiple ways to fetch data in your application. You can use TanStack Query to fetch data from a server. But you can also use the `loader` functionality built into TanStack Router to load the data for a route before it's rendered.
-
-For example:
-
-```tsx
-import { createFileRoute } from '@tanstack/react-router'
-
-export const Route = createFileRoute('/people')({
-  loader: async () => {
-    const response = await fetch('https://swapi.dev/api/people')
-    return response.json()
-  },
-  component: PeopleComponent,
-})
-
-function PeopleComponent() {
-  const data = Route.useLoaderData()
-  return (
-    <ul>
-      {data.results.map((person) => (
-        <li key={person.name}>{person.name}</li>
-      ))}
-    </ul>
-  )
-}
-```
-
-Loaders simplify your data fetching logic dramatically. Check out more information in the [Loader documentation](https://tanstack.com/router/latest/docs/framework/react/guide/data-loading#loader-parameters).
-
-# Demo files
-
-Files prefixed with `demo` can be safely deleted. They are there to provide a starting point for you to play around with the features you've installed.
-
-# Learn More
-
-You can learn more about all of the offerings from TanStack in the [TanStack documentation](https://tanstack.com).
-
-For TanStack Start specific documentation, visit [TanStack Start](https://tanstack.com/start).
+No API keys or environment variables are required.
